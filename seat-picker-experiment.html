@@ -1,0 +1,2082 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>SkyJet Mobile — Cognitive Load Demo</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+  html, body {
+    height: 100%;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: #e9eef5;
+    color: #1a2233;
+    overflow: hidden;
+  }
+
+  .phone {
+    max-width: 420px;
+    margin: 0 auto;
+    height: 100vh;
+    background: #fff;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 0 40px rgba(0,0,0,0.08);
+  }
+
+  .header {
+    background: linear-gradient(135deg, #1e40af 0%, #2563eb 100%);
+    color: #fff;
+    padding: 14px 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-shrink: 0;
+    position: relative;
+    overflow: hidden;
+  }
+  .header::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(circle at 20% 50%, rgba(255,255,255,0.15), transparent 60%);
+    animation: parallax 6s linear infinite;
+  }
+  @keyframes parallax {
+    0% { transform: translateX(-20%); }
+    100% { transform: translateX(20%); }
+  }
+  .header .brand { font-weight: 700; font-size: 18px; letter-spacing: 0.5px; position: relative; }
+  .header .timer {
+    background: rgba(255,255,255,0.18);
+    padding: 4px 10px;
+    border-radius: 12px;
+    font-size: 13px;
+    font-variant-numeric: tabular-nums;
+    font-weight: 600;
+    position: relative;
+  }
+  .header .timer.warn { background: #dc2626; animation: pulse 0.8s infinite; }
+  @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.5; } }
+
+  .flight-bar {
+    background: #f1f5f9;
+    padding: 10px 16px;
+    font-size: 12px;
+    color: #475569;
+    display: flex;
+    justify-content: space-between;
+    flex-shrink: 0;
+    border-bottom: 1px solid #e2e8f0;
+  }
+  .flight-bar strong { color: #1a2233; }
+
+  .ticker-strip {
+    background: #fef3c7;
+    color: #78350f;
+    padding: 4px 0;
+    font-size: 11px;
+    font-weight: 600;
+    overflow: hidden;
+    white-space: nowrap;
+    position: relative;
+    flex-shrink: 0;
+  }
+  .ticker-strip .track {
+    display: inline-block;
+    padding-left: 100%;
+    animation: tick 22s linear infinite;
+  }
+  @keyframes tick { to { transform: translateX(-100%); } }
+
+  .screen {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px;
+    display: none;
+    -webkit-overflow-scrolling: touch;
+  }
+  .screen.active { display: block; }
+
+  h1 { font-size: 22px; margin-bottom: 6px; }
+  h2 { font-size: 18px; margin-bottom: 12px; }
+  p.sub { color: #64748b; font-size: 14px; margin-bottom: 18px; line-height: 1.5; }
+
+  /* ------ Brief / dual-task number ------ */
+  .brief-card {
+    background: linear-gradient(135deg, #312e81, #1e40af);
+    color: #fff;
+    border-radius: 18px;
+    padding: 22px;
+    margin: 10px 0 16px;
+    text-align: center;
+  }
+  .brief-card .label {
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    opacity: 0.8;
+    margin-bottom: 12px;
+  }
+  .brief-card .digits {
+    font-size: 34px;
+    font-weight: 800;
+    letter-spacing: 4px;
+    font-variant-numeric: tabular-nums;
+    margin-bottom: 10px;
+    font-family: "SF Mono", "Menlo", monospace;
+    white-space: nowrap;
+  }
+  .brief-card .hint { font-size: 12px; opacity: 0.85; line-height: 1.5; }
+
+  /* ------ Trip card ------ */
+  .trip-card {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 14px;
+    padding: 16px;
+    margin-bottom: 16px;
+    text-align: left;
+  }
+  .trip-card .route {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 8px;
+  }
+  .trip-card .city { font-size: 22px; font-weight: 700; }
+  .trip-card .arrow { color: #2563eb; font-size: 20px; }
+  .trip-card .meta { font-size: 12px; color: #64748b; }
+
+  /* ------ Seat map ------ */
+  .plane {
+    background: #f8fafc;
+    border-radius: 18px;
+    padding: 18px 10px;
+    border: 1px solid #e2e8f0;
+    margin-bottom: 16px;
+    position: relative;
+  }
+  .nose {
+    width: 80px; height: 40px; margin: 0 auto 10px;
+    background: #e2e8f0; border-radius: 50% 50% 12px 12px;
+  }
+  .seat-row {
+    display: grid;
+    grid-template-columns: 18px repeat(3, 1fr) 12px repeat(3, 1fr) 18px;
+    gap: 4px;
+    margin-bottom: 4px;
+    align-items: center;
+  }
+  .row-num { font-size: 11px; color: #94a3b8; text-align: center; }
+  .seat {
+    aspect-ratio: 1;
+    border-radius: 4px 4px 8px 8px;
+    background: #cbd5e1;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 9px; color: #475569;
+    cursor: pointer;
+    transition: transform 0.15s, background 0.15s;
+    user-select: none; font-weight: 600;
+    min-width: 22px;
+  }
+  .seat.available { background: #93c5fd; color: #1e3a8a; }
+  .seat.available:active { transform: scale(0.9); }
+  .seat.premium { background: #fde68a; color: #78350f; }
+  .seat.taken { background: #475569; color: #475569; cursor: not-allowed; }
+  .seat.selected { background: #16a34a; color: #fff; transform: scale(1.1); box-shadow: 0 2px 8px rgba(22,163,74,0.4); }
+
+  .legend {
+    display: flex; justify-content: space-around;
+    font-size: 11px; color: #475569;
+    padding-top: 10px; border-top: 1px dashed #cbd5e1;
+  }
+  .legend-item { display: flex; align-items: center; gap: 5px; }
+  .legend-swatch { width: 14px; height: 14px; border-radius: 3px; }
+
+  /* ------ Carousel (distraction) ------ */
+  .carousel {
+    height: 70px;
+    border-radius: 12px;
+    overflow: hidden;
+    position: relative;
+    margin-bottom: 14px;
+  }
+  .carousel .slide {
+    position: absolute; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    color: #fff; font-weight: 600; font-size: 14px;
+    opacity: 0; transition: opacity 0.6s;
+    padding: 0 16px; text-align: center;
+  }
+  .carousel .slide.active { opacity: 1; }
+  .carousel .slide:nth-child(1) { background: linear-gradient(135deg,#f59e0b,#ef4444); }
+  .carousel .slide:nth-child(2) { background: linear-gradient(135deg,#8b5cf6,#ec4899); }
+  .carousel .slide:nth-child(3) { background: linear-gradient(135deg,#10b981,#3b82f6); }
+  .carousel .slide:nth-child(4) { background: linear-gradient(135deg,#f97316,#dc2626); }
+
+  /* ------ Buttons ------ */
+  .btn {
+    width: 100%;
+    padding: 14px;
+    border: none; border-radius: 12px;
+    background: #2563eb; color: #fff;
+    font-size: 16px; font-weight: 600;
+    cursor: pointer; transition: background 0.15s;
+    font-family: inherit;
+  }
+  .btn:active { background: #1d4ed8; }
+  .btn:disabled { background: #cbd5e1; cursor: not-allowed; }
+  .btn.secondary { background: #f1f5f9; color: #1a2233; }
+  .btn.danger { background: #dc2626; }
+  .btn.ghost { background: transparent; color: #2563eb; border: 1px solid #cbd5e1; }
+
+  .btn-row { display: flex; gap: 10px; margin-top: 12px; }
+  .btn-row .btn { flex: 1; }
+
+  /* Three equal-weight CTAs */
+  .btn-3up { display: flex; gap: 8px; margin-top: 14px; }
+  .btn-3up .btn {
+    background: #2563eb; color: #fff; font-size: 13px; padding: 12px 6px;
+  }
+
+  /* ------ Forms ------ */
+  .field { margin-bottom: 14px; }
+  .field label {
+    display: block; font-size: 12px; color: #475569;
+    margin-bottom: 5px; font-weight: 600;
+    text-transform: uppercase; letter-spacing: 0.4px;
+  }
+  .field input, .field select, .field textarea {
+    width: 100%; padding: 12px;
+    border: 1px solid #cbd5e1; border-radius: 10px;
+    font-size: 15px; font-family: inherit; background: #fff;
+  }
+  .field input:focus, .field select:focus {
+    outline: none; border-color: #2563eb;
+  }
+  .field.half { display: inline-block; width: calc(50% - 5px); }
+  .field.half:first-child { margin-right: 8px; }
+
+  /* Placeholder-only labels (label vanishes on focus) */
+  .field.ph-only label {
+    position: absolute; pointer-events: none;
+    color: #94a3b8; font-size: 15px; font-weight: 400;
+    text-transform: none; letter-spacing: normal;
+    padding: 12px; margin: 0;
+    transition: opacity 0.15s;
+  }
+  .field.ph-only { position: relative; }
+  .field.ph-only input:focus + label,
+  .field.ph-only input:not(:placeholder-shown) + label { opacity: 0; }
+
+  .field.error input, .field.error select { border-color: #dc2626; background: #fef2f2; }
+
+  .inline-err {
+    color: #dc2626; font-size: 12px;
+    margin-top: 4px; display: block;
+  }
+
+  .field .helper {
+    display: block;
+    font-size: 11px;
+    color: #94a3b8;
+    margin-top: 4px;
+    line-height: 1.3;
+  }
+  .field .field-error {
+    display: none;
+    color: #dc2626;
+    font-size: 12px;
+    margin-top: 4px;
+    font-weight: 500;
+    line-height: 1.3;
+  }
+  .field.error .field-error { display: block; }
+  .field.error .helper { display: none; }
+
+  .demo-disclaimer {
+    background: #ecfdf5;
+    border: 1px solid #a7f3d0;
+    border-radius: 10px;
+    padding: 8px 12px;
+    margin-bottom: 12px;
+    font-size: 11px;
+    color: #065f46;
+    line-height: 1.4;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .demo-disclaimer .lock-icon {
+    flex-shrink: 0;
+    font-size: 14px;
+  }
+
+  /* ------ Upsells / tiles ------ */
+  .upsell {
+    border: 2px solid #e2e8f0; border-radius: 12px;
+    padding: 14px; margin-bottom: 10px;
+    display: flex; justify-content: space-between; align-items: center;
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s;
+  }
+  .upsell.selected { border-color: #2563eb; background: #eff6ff; }
+  .upsell .info { flex: 1; }
+  .upsell .info .title { font-weight: 600; font-size: 15px; margin-bottom: 2px; }
+  .upsell .info .desc { font-size: 12px; color: #64748b; }
+  .upsell .price { font-weight: 700; color: #2563eb; margin-left: 10px; }
+  .upsell .check {
+    width: 22px; height: 22px; border-radius: 50%;
+    border: 2px solid #cbd5e1; margin-left: 10px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .upsell.selected .check { background: #2563eb; border-color: #2563eb; color: #fff; }
+  .upsell.selected .check::after { content: "✓"; font-size: 13px; font-weight: 700; }
+
+  /* ------ Dense T&C reading ------ */
+  .tc-box {
+    background: #f8fafc; border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    padding: 12px; margin-bottom: 10px;
+    height: 240px; overflow-y: auto;
+    font-size: 12px; line-height: 1.35; color: #334155;
+    text-align: justify;
+    font-family: Georgia, serif;
+  }
+  .tc-box p { margin-bottom: 8px; }
+
+  .autoplay-video {
+    position: relative;
+    height: 170px;
+    border-radius: 10px;
+    overflow: hidden;
+    margin: 10px 0;
+    background: #0f172a;
+    color: #fff;
+    font-family: -apple-system, sans-serif;
+  }
+  .autoplay-video .vid-el {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    background: #0f172a;
+  }
+  .autoplay-video .live-badge {
+    position: absolute; top: 10px; left: 10px;
+    background: #dc2626; color: #fff;
+    font-size: 10px; font-weight: 700;
+    padding: 3px 8px; border-radius: 4px;
+    display: flex; align-items: center; gap: 5px;
+    letter-spacing: 0.5px;
+  }
+  .autoplay-video .live-badge .dot {
+    width: 6px; height: 6px; background: #fff; border-radius: 50%;
+    animation: pulse 1s infinite;
+  }
+  .autoplay-video .vid-title {
+    position: absolute; top: 10px; right: 10px;
+    background: rgba(0,0,0,0.6);
+    padding: 4px 8px; border-radius: 4px;
+    font-size: 11px; font-weight: 600;
+  }
+  .autoplay-video .captions {
+    position: absolute; bottom: 28px; left: 10px; right: 10px;
+    background: rgba(0,0,0,0.75);
+    color: #fff; padding: 5px 10px;
+    border-radius: 4px;
+    font-size: 12px; font-weight: 500;
+    text-align: center;
+  }
+  .autoplay-video .controls {
+    position: absolute; bottom: 0; left: 0; right: 0;
+    background: linear-gradient(to top, rgba(0,0,0,0.85), transparent);
+    padding: 6px 10px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .autoplay-video .controls .icon-btn {
+    background: none; border: none; color: #fff;
+    font-size: 14px; cursor: pointer; padding: 2px 4px;
+  }
+  .autoplay-video .controls .progress {
+    flex: 1; height: 3px; background: rgba(255,255,255,0.3);
+    border-radius: 2px; overflow: hidden;
+  }
+  .autoplay-video .controls .progress-fill {
+    height: 100%; background: #ef4444;
+    animation: progress 18s linear infinite;
+  }
+  @keyframes progress {
+    0% { width: 0; }
+    100% { width: 100%; }
+  }
+  .autoplay-video .controls .time {
+    font-size: 10px; font-variant-numeric: tabular-nums;
+  }
+
+  /* ------ Pricing grid (7 tiers, no recommendation) ------ */
+  .plan-card {
+    border: 2px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 12px;
+    margin-bottom: 8px;
+    cursor: pointer;
+    display: flex; justify-content: space-between; align-items: center;
+    transition: border-color 0.15s;
+  }
+  .plan-card.selected { border-color: #2563eb; background: #eff6ff; }
+  .plan-card .p-name { font-weight: 700; font-size: 14px; }
+  .plan-card .p-desc { font-size: 11px; color: #64748b; margin-top: 2px; line-height: 1.3; }
+  .plan-card .p-price { font-size: 16px; font-weight: 700; color: #2563eb; }
+
+  /* ------ Toggles (22 of them) ------ */
+  .toggle-row {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 10px 0;
+    border-bottom: 1px solid #f1f5f9;
+    font-size: 13px;
+  }
+  .toggle-row .tg-label { flex: 1; padding-right: 10px; }
+  .tg {
+    width: 40px; height: 22px;
+    background: #cbd5e1; border-radius: 12px;
+    position: relative; cursor: pointer;
+    transition: background 0.15s; flex-shrink: 0;
+  }
+  .tg::after {
+    content: ""; position: absolute; top: 2px; left: 2px;
+    width: 18px; height: 18px; background: #fff; border-radius: 50%;
+    transition: transform 0.15s;
+  }
+  .tg.on { background: #2563eb; }
+  .tg.on::after { transform: translateX(18px); }
+
+  /* ------ Password rules ------ */
+  .pw-rules { margin: 10px 0 14px; font-size: 12px; }
+  .pw-rules .rule {
+    display: flex; align-items: center; gap: 6px;
+    padding: 4px 0; color: #64748b;
+  }
+  .pw-rules .rule::before {
+    content: "○"; color: #94a3b8;
+  }
+  .pw-rules .rule.failed { color: #dc2626; }
+  .pw-rules .rule.failed::before { content: "✗"; color: #dc2626; }
+  .pw-rules .rule.passed { color: #16a34a; }
+  .pw-rules .rule.passed::before { content: "✓"; color: #16a34a; }
+
+  /* ------ Captcha ------ */
+  .captcha-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 4px;
+    margin-bottom: 12px;
+  }
+  .captcha-tile {
+    aspect-ratio: 1;
+    background-size: cover;
+    background-position: center;
+    border-radius: 6px;
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+    border: 3px solid transparent;
+  }
+  .captcha-tile.sel {
+    border-color: #2563eb;
+  }
+  .captcha-tile.sel::after {
+    content: "✓";
+    position: absolute;
+    top: 2px; right: 4px;
+    background: #2563eb;
+    color: #fff;
+    width: 20px; height: 20px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px; font-weight: 700;
+  }
+
+  /* ------ Ads ------ */
+  .ad-card {
+    background: linear-gradient(135deg, #f59e0b, #ef4444);
+    color: #fff; padding: 14px; border-radius: 12px;
+    margin-bottom: 14px; text-align: center;
+    font-size: 13px; font-weight: 600;
+  }
+  .ad-card strong { display: block; font-size: 16px; margin-bottom: 4px; }
+
+  .banner-animated {
+    background: linear-gradient(90deg, #ec4899, #8b5cf6, #3b82f6, #ec4899);
+    background-size: 300% 100%;
+    animation: shimmer 3s linear infinite;
+    color: #fff; padding: 10px; border-radius: 10px;
+    text-align: center; font-size: 13px; font-weight: 600;
+    margin-bottom: 12px;
+  }
+  @keyframes shimmer { 0% { background-position: 0 0; } 100% { background-position: 300% 0; } }
+
+  /* ------ Crash screen ------ */
+  .crash-box {
+    text-align: center;
+    padding: 40px 10px;
+  }
+  .crash-box .x { font-size: 70px; margin-bottom: 14px; }
+  .crash-box h1 { color: #dc2626; margin-bottom: 12px; }
+  .crash-box p { color: #64748b; line-height: 1.5; margin-bottom: 20px; }
+
+  /* ------ Confirm / result ------ */
+  .confirm-check { font-size: 80px; text-align: center; margin: 30px 0 10px; animation: bounceIn 0.5s; }
+  @keyframes bounceIn { 0% { transform: scale(0); } 60% { transform: scale(1.2); } 100% { transform: scale(1); } }
+  .confirm-title { text-align: center; font-size: 24px; margin-bottom: 8px; }
+  .confirm-sub { text-align: center; color: #64748b; margin-bottom: 20px; }
+  .confirm-details {
+    background: #f0fdf4; border: 1px solid #86efac;
+    border-radius: 12px; padding: 16px; margin-bottom: 16px;
+    font-size: 14px;
+  }
+  .confirm-row {
+    display: flex; justify-content: space-between;
+    padding: 6px 0; border-bottom: 1px dashed #bbf7d0;
+  }
+  .confirm-row:last-child { border-bottom: none; }
+  .confirm-row .k { color: #15803d; }
+  .confirm-row .v { font-weight: 600; }
+
+  /* ------ Recall ------ */
+  .recall-box { padding: 10px 0; }
+  .recall-q {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 14px; margin-bottom: 12px;
+  }
+  .recall-q label {
+    display: block; font-size: 13px; color: #475569;
+    margin-bottom: 8px; font-weight: 600;
+  }
+  .recall-q input {
+    width: 100%; padding: 14px;
+    border: 2px solid #cbd5e1; border-radius: 10px;
+    font-size: 20px; text-align: center; font-weight: 700;
+    letter-spacing: 2px; font-family: inherit;
+  }
+  .recall-q input:focus { outline: none; border-color: #2563eb; }
+
+  .result-icon { font-size: 70px; margin-bottom: 10px; text-align: center; }
+  .result-title { font-size: 22px; font-weight: 700; text-align: center; margin-bottom: 8px; }
+  .score-line {
+    display: flex; justify-content: space-between;
+    padding: 10px 0; border-bottom: 1px solid #e2e8f0;
+    font-size: 14px;
+  }
+  .score-line .v { font-weight: 700; }
+  .score-line .ok { color: #16a34a; }
+  .score-line .bad { color: #dc2626; }
+
+  .debrief {
+    background: #f8fafc;
+    border-radius: 12px;
+    padding: 14px;
+    margin-top: 16px;
+    font-size: 12px;
+  }
+  .debrief h3 { font-size: 13px; margin-bottom: 8px; color: #1a2233; }
+  .debrief ul { padding-left: 16px; color: #475569; line-height: 1.6; }
+  .debrief li { margin-bottom: 2px; }
+
+  .notice {
+    font-size: 11px; color: #94a3b8;
+    text-align: center; padding: 10px; line-height: 1.4;
+  }
+
+  /* ------ Training footer (persistent) ------ */
+  .training-footer {
+    flex-shrink: 0;
+    background: #0f172a;
+    color: #cbd5e1;
+    font-size: 10px;
+    line-height: 1.4;
+    padding: 8px 12px;
+    text-align: center;
+    border-top: 1px solid #1e293b;
+  }
+  .training-footer .notice-link {
+    background: none;
+    border: none;
+    color: #93c5fd;
+    text-decoration: underline;
+    font-size: inherit;
+    font-family: inherit;
+    cursor: pointer;
+    padding: 0;
+  }
+  .training-footer .notice-link:hover,
+  .training-footer .notice-link:focus {
+    color: #fff;
+    outline: 2px solid #93c5fd;
+    outline-offset: 2px;
+    border-radius: 2px;
+  }
+
+  /* ------ Accessible notice modal (separate from the deceptive modal system) ------ */
+  .notice-overlay {
+    position: absolute; inset: 0;
+    background: rgba(15, 23, 42, 0.7);
+    display: none;
+    align-items: center; justify-content: center;
+    padding: 20px;
+    z-index: 300;
+  }
+  .notice-overlay.show { display: flex; }
+  .notice-modal {
+    background: #fff;
+    border-radius: 16px;
+    max-width: 360px;
+    width: 100%;
+    max-height: 85vh;
+    overflow-y: auto;
+    padding: 22px;
+    box-shadow: 0 20px 50px rgba(0,0,0,0.35);
+    outline: none;
+  }
+  .notice-modal h2 {
+    font-size: 18px;
+    margin-bottom: 12px;
+    color: #1a2233;
+  }
+  .notice-modal p {
+    font-size: 13px;
+    color: #334155;
+    line-height: 1.55;
+    margin-bottom: 12px;
+  }
+  .notice-modal .close-btn {
+    width: 100%;
+    padding: 12px;
+    background: #2563eb;
+    color: #fff;
+    border: none;
+    border-radius: 10px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: inherit;
+    margin-top: 6px;
+  }
+  .notice-modal .close-btn:focus {
+    outline: 3px solid #93c5fd;
+    outline-offset: 2px;
+  }
+
+  /* ------ Modal ------ */
+  .modal-overlay {
+    position: absolute; inset: 0;
+    background: rgba(15, 23, 42, 0.55);
+    backdrop-filter: blur(3px);
+    display: none;
+    align-items: center; justify-content: center;
+    padding: 20px; z-index: 200;
+    animation: fadeIn 0.2s;
+  }
+  .modal-overlay.show { display: flex; }
+  @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+  .modal {
+    background: #fff; border-radius: 18px;
+    max-width: 340px; width: 100%;
+    padding: 22px 20px 18px;
+    box-shadow: 0 20px 50px rgba(0,0,0,0.3);
+    animation: popIn 0.25s;
+    max-height: 90vh; overflow-y: auto;
+  }
+  @keyframes popIn {
+    from { transform: scale(0.85); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+  }
+  .modal .m-icon { font-size: 42px; text-align: center; margin-bottom: 10px; }
+  .modal .m-title { font-size: 18px; font-weight: 700; text-align: center; margin-bottom: 8px; }
+  .modal .m-body {
+    font-size: 14px; color: #475569; line-height: 1.5;
+    text-align: center; margin-bottom: 16px;
+  }
+  .modal .m-body strong { color: #1a2233; }
+  .modal .m-input {
+    width: 100%; padding: 12px;
+    border: 2px solid #cbd5e1; border-radius: 10px;
+    font-size: 16px; text-align: center; margin-bottom: 12px;
+    font-family: inherit;
+  }
+  .modal .m-input:focus { outline: none; border-color: #2563eb; }
+  .modal .m-btns { display: flex; gap: 8px; }
+  .modal .m-btn {
+    flex: 1; padding: 12px;
+    border: none; border-radius: 10px;
+    font-size: 15px; font-weight: 600; cursor: pointer;
+    font-family: inherit;
+  }
+  .modal .m-btn.primary { background: #2563eb; color: #fff; }
+  .modal .m-btn.secondary { background: #f1f5f9; color: #1a2233; }
+  .modal .m-btn.danger { background: #dc2626; color: #fff; }
+  .modal.sneaky .m-btn.primary { background: #cbd5e1; color: #64748b; }
+  .modal.sneaky .m-btn.secondary { background: #2563eb; color: #fff; }
+
+  .modal .ref-code {
+    font-size: 28px; letter-spacing: 4px;
+    font-family: "SF Mono", monospace; font-weight: 700;
+    text-align: center; background: #f1f5f9; padding: 14px;
+    border-radius: 10px; margin-bottom: 12px;
+  }
+
+  /* Fake incoming notification banner */
+  .notif {
+    position: absolute;
+    top: 8px; left: 8px; right: 8px;
+    background: rgba(30,41,59,0.95);
+    color: #fff; padding: 10px 14px;
+    border-radius: 12px;
+    font-size: 13px;
+    backdrop-filter: blur(10px);
+    transform: translateY(-300%);
+    transition: transform 0.35s;
+    z-index: 150;
+    display: flex; align-items: center; gap: 10px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.25);
+  }
+  .notif.show { transform: translateY(0); }
+  .notif .icon {
+    width: 28px; height: 28px; border-radius: 6px;
+    background: #2563eb;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px; flex-shrink: 0;
+  }
+  .notif .content { flex: 1; font-size: 12px; }
+  .notif .content .tb { font-weight: 700; font-size: 13px; display: block; }
+</style>
+</head>
+<body>
+
+<div class="phone">
+
+  <div class="header">
+    <div class="brand">✈ SkyJet</div>
+    <div class="timer"
+         id="timer"
+         style="display:none;"
+         role="alert"
+         aria-live="assertive"
+         aria-atomic="true"
+         aria-label="Session time remaining">⏱ 2:00</div>
+  </div>
+
+  <div class="flight-bar">
+    <div>Flight <strong>SJ 482</strong></div>
+    <div><strong>BOS</strong> → <strong>SFO</strong></div>
+    <div id="flightDateShort">—</div>
+  </div>
+
+  <div class="ticker-strip">
+    <span class="track">🔥 Flash Sale ending soon · Bonus miles today · 82% of seats booked · Seat prices rising · Premium upgrades half off · Book now, pay later</span>
+  </div>
+
+  <div class="modal-overlay" id="modalOverlay">
+    <div class="modal" id="modal"></div>
+  </div>
+
+  <div class="notif" id="notif">
+    <div class="icon">💬</div>
+    <div class="content"></div>
+  </div>
+
+  <!-- ===== Screen: Notice ===== -->
+  <div class="screen active" id="screen-notice">
+    <h1 style="margin-top:10px;">Training &amp; Confidentiality Notice</h1>
+    <p style="font-size:13px; color:#334155; line-height:1.55; margin-top:14px;">
+      This website was created as part of accessibility training and contains intentional accessibility errors for educational purposes. Any resemblance to real businesses, individuals, or entities—living or dead—is purely coincidental. All names, images, and mission content are fictitious or under the ownership of Deque Systems, Inc. ("Deque").
+    </p>
+    <p style="font-size:13px; color:#334155; line-height:1.55; margin-top:12px; margin-bottom:20px;">
+      These course materials are considered confidential information of Deque. Nothing in these course materials is intended to grant any rights to the Client under any copyright, trade secret, or other intellectual property right of Deque. Deque specifically prohibits the use of these course materials in artificial intelligence or machine learning training.
+    </p>
+    <button class="btn" onclick="goTo('brief')">I acknowledge — continue</button>
+  </div>
+
+  <!-- ===== Screen: Brief ===== -->
+  <div class="screen" id="screen-brief">
+    <h1 style="margin-top:10px;">Before you begin</h1>
+    <p class="sub">You're about to complete a flight booking. We'll also be running a quick memory check at the end.</p>
+
+    <div class="brief-card">
+      <div class="label">Your reservation PIN</div>
+      <div class="digits" id="brief-pin">4 8 2 9 1 6 3</div>
+      <div class="hint">Remember these 7 digits. You'll be asked to type them at the end of the booking.</div>
+    </div>
+
+    <div class="trip-card">
+      <div class="route">
+        <div class="city">BOS</div>
+        <div class="arrow">✈</div>
+        <div class="city">SFO</div>
+      </div>
+      <div class="meta"><span id="flightDateLong">—</span> · 8:20 AM · 6h 35m · Nonstop</div>
+    </div>
+
+    <button class="btn" onclick="goTo('terms')">Click here to continue.</button>
+  </div>
+
+  <!-- ===== Screen: Dense Terms ===== -->
+  <div class="screen" id="screen-terms">
+    <h2>Terms of carriage</h2>
+    <p class="sub">Your application will be processed upon agreement with the below.</p>
+
+    <div class="autoplay-video" aria-label="Autoplay video: 5 reasons to upgrade">
+      <video class="vid-el" src="32975-394513987.mp4" autoplay muted loop playsinline></video>
+      <div class="live-badge"><span class="dot"></span>LIVE</div>
+      <div class="vid-title">▶ 5 reasons to upgrade</div>
+      <div class="captions" id="vidCaptions">…upgrade today and enjoy priority boarding…</div>
+      <div class="controls">
+        <button class="icon-btn" aria-label="Pause">⏸</button>
+        <button class="icon-btn" aria-label="Mute">🔊</button>
+        <div class="progress"><div class="progress-fill"></div></div>
+        <span class="time">0:14 / 0:30</span>
+        <button class="icon-btn" aria-label="Fullscreen">⛶</button>
+      </div>
+    </div>
+
+    <div class="tc-box" id="tcBox">
+      <p>In the event that any itinerary modification is effectuated by the customer at a time subsequent to the issuance of the aforementioned ticketing instrument, and prior to the commencement of the initial flight segment, a reaccommodation surcharge, the quantum of which shall be determined at the sole discretion of the carrier, may, at the carrier's election, be assessed against the passenger of record.</p>
+      <p>Notwithstanding anything herein to the contrary, the carrier reserves the unfettered right, without prior notice, to reassign seat allocations where operationally necessary, and the passenger's acceptance of these terms shall constitute irrevocable consent to such reassignment, including but not limited to reassignments resulting in the relocation of the passenger to a non-window, non-aisle, non-exit-row, non-premium-economy seating configuration.</p>
+      <p>We'll circle back on any outstanding balance at your earliest convenience. Low-hanging fruit such as ancillary meal charges, checked baggage overages, and onboard Wi-Fi subscriptions shall be billed in accordance with the fee schedule in effect at the time of travel, not at the time of booking.</p>
+      <p>It is understood and agreed that the carrier shall not be held liable for incidental, consequential, punitive, or exemplary damages arising from, or in connection with, any delay, cancellation, misconnection, baggage mishandling, or service interruption, howsoever caused, including events of force majeure, labor actions, and acts of a governmental body.</p>
+      <p>All disputes shall be resolved through binding arbitration in a jurisdiction of the carrier's choosing, and the passenger hereby irrevocably waives any right to trial by jury, participation in a class or collective action, or seeking injunctive or equitable relief.</p>
+      <p>A processing fee, convenience fee, and regulatory assessment may, at the carrier's sole discretion, be appended to the base fare; these amounts shall be disclosed at such time as the carrier deems appropriate within the booking flow and are non-refundable irrespective of itinerary changes.</p>
+    </div>
+
+    <button class="btn" onclick="goTo('seats')">I agree — continue</button>
+  </div>
+
+  <!-- ===== Screen: Seat map ===== -->
+  <div class="screen" id="screen-seats">
+    <h2>Choose your seat</h2>
+    <p class="sub">Tap any available seat to select it.</p>
+
+    <div class="carousel" id="carousel">
+      <div class="slide active">🔥 50% off premium seats — today only!</div>
+      <div class="slide">✈ Earn 2× miles on this flight</div>
+      <div class="slide">🧳 Add baggage now, save 20%</div>
+      <div class="slide">🛡 Trip protection just $29</div>
+    </div>
+
+    <div class="plane" id="plane"></div>
+    <button class="btn" id="confirmSeat" disabled onclick="confirmSeat()">Continue</button>
+  </div>
+
+  <!-- ===== Screen: Passenger details ===== -->
+  <div class="screen" id="screen-details">
+    <h2>Passenger details</h2>
+    <p class="sub" id="detailsSubText">Your information will be processed by the system.</p>
+
+    <div class="demo-disclaimer">
+      <span class="lock-icon">🔒</span>
+      <span><strong>Demo only.</strong> No data is collected, transmitted, or stored. Use any made-up info — but it must match each field's expected format.</span>
+    </div>
+
+    <div class="banner-animated">⚡ Complete this step in the next 2 minutes to lock in your price</div>
+
+    <div class="field">
+      <label for="f_name">Name</label>
+      <input type="text" id="f_name" placeholder="Jane A. Doe" autocomplete="off">
+      <span class="helper">Your full legal name as it appears on your ID.</span>
+      <span class="field-error" id="f_name_err"></span>
+    </div>
+    <div>
+      <div class="field half">
+        <label for="f_dob">DOB</label>
+        <input type="text" id="f_dob" placeholder="MM/DD/YYYY" inputmode="numeric" autocomplete="off">
+        <span class="helper">Format: MM/DD/YYYY</span>
+        <span class="field-error" id="f_dob_err"></span>
+      </div>
+      <div class="field half">
+        <label for="f_pass">Document ID</label>
+        <input type="text" id="f_pass" placeholder="A1234567" autocomplete="off">
+        <span class="helper">Passport or driver's license, 6–15 letters/numbers.</span>
+        <span class="field-error" id="f_pass_err"></span>
+      </div>
+    </div>
+    <div class="field">
+      <label for="f_phone">Phone</label>
+      <input type="tel" id="f_phone" placeholder="(555) 123-4567" inputmode="tel" autocomplete="off">
+      <span class="helper">10-digit US phone number.</span>
+      <span class="field-error" id="f_phone_err"></span>
+    </div>
+    <div class="field">
+      <label for="f_email">Email</label>
+      <input type="email" id="f_email" placeholder="you@example.com" autocomplete="off">
+      <span class="helper">We'll send your boarding pass here.</span>
+      <span class="field-error" id="f_email_err"></span>
+    </div>
+
+    <div id="detailsErr"></div>
+
+    <button class="btn" onclick="submitDetails()">Continue</button>
+  </div>
+
+  <!-- ===== Screen: Crash ===== -->
+  <div class="screen" id="screen-crash">
+    <div class="crash-box">
+      <div class="x">⚠️</div>
+      <h1>Something went wrong</h1>
+      <p>Your session was interrupted. Please re-enter your information to continue.</p>
+      <button class="btn" onclick="restartFromCrash()">Restart</button>
+    </div>
+  </div>
+
+  <!-- ===== Screen: Identity verification (show) ===== -->
+  <div class="screen" id="screen-idshow">
+    <h2>Verify your identity</h2>
+    <p class="sub">We need to confirm it's really you. A reference number has been generated for your session.</p>
+
+    <div class="brief-card" style="background: linear-gradient(135deg,#0f766e,#0ea5e9);">
+      <div class="label">Reference number</div>
+      <div class="digits" id="refcode" style="font-size:30px; letter-spacing:4px;">X4K-9M2</div>
+      <div class="hint">You'll enter this on the next screen.</div>
+    </div>
+
+    <button class="btn" onclick="goTo('identer')">Continue</button>
+  </div>
+
+  <!-- ===== Screen: Identity verification (enter) ===== -->
+  <div class="screen" id="screen-identer">
+    <h2>Enter reference number</h2>
+    <p class="sub">Type the reference number you were just shown.</p>
+
+    <div class="field">
+      <label>Reference number</label>
+      <input type="text" id="refEntered" placeholder="XXX-XXX" autocomplete="off"
+             onpaste="return blockPaste(event)"
+             oncopy="return false"
+             style="text-align:center; font-size:20px; letter-spacing:3px; font-family:'SF Mono',monospace;">
+      <div class="notice" style="text-align:left; padding:4px 0;">For security, paste is disabled.</div>
+    </div>
+
+    <button class="btn" onclick="submitRefCode()">Verify</button>
+  </div>
+
+  <!-- ===== Screen: Password / account creation ===== -->
+  <div class="screen" id="screen-password">
+    <h2>Create your SkyJet account</h2>
+    <p class="sub">Save your info for faster future bookings.</p>
+
+    <div class="field">
+      <label>Password</label>
+      <input type="password" id="pwField" placeholder="Create a password"
+             onpaste="return blockPaste(event)"
+             oninput="checkPw()">
+    </div>
+
+    <div class="pw-rules" id="pwRules"></div>
+
+    <button class="btn" id="pwBtn" disabled onclick="goTo('plan')">Create account</button>
+    <button class="btn ghost" style="margin-top:8px;" onclick="goTo('plan')">Skip for now</button>
+  </div>
+
+  <!-- ===== Screen: Plan selection ===== -->
+  <div class="screen" id="screen-plan">
+    <h2>Pick a fare</h2>
+    <p class="sub">Every passenger will have these options displayed.</p>
+
+    <div id="planList"></div>
+
+    <div class="btn-3up">
+      <button class="btn" onclick="goTo('prefs')">Continue</button>
+      <button class="btn" onclick="goTo('prefs')">Save & continue</button>
+      <button class="btn" onclick="goTo('prefs')">Confirm selection</button>
+    </div>
+  </div>
+
+  <!-- ===== Screen: Preferences (22 toggles) ===== -->
+  <div class="screen" id="screen-prefs">
+    <h2>Notification & privacy preferences</h2>
+    <p class="sub">Review all of the following. All settings will be applied automatically.</p>
+
+    <div id="toggleList"></div>
+
+    <button class="btn" style="margin-top:16px;" onclick="goTo('captcha')">Save preferences</button>
+  </div>
+
+  <!-- ===== Screen: Captcha ===== -->
+  <div class="screen" id="screen-captcha">
+    <h2>Security check</h2>
+    <p class="sub">Select all squares containing <strong>traffic lights</strong>.</p>
+    <div class="captcha-grid" id="captchaGrid"></div>
+    <button class="btn" onclick="goTo('otp')">Verify</button>
+  </div>
+
+  <!-- ===== Screen: OTP with countdown ===== -->
+  <div class="screen" id="screen-otp">
+    <h2>Enter your one-time code</h2>
+    <p class="sub">A 6-digit code has been sent to your phone. It expires in <strong id="otpTimer">15</strong>s.</p>
+
+    <div class="field">
+      <input type="text" id="otpInput" placeholder="000000" maxlength="6"
+             inputmode="numeric"
+             style="text-align:center; font-size:24px; letter-spacing:8px; font-family:'SF Mono',monospace;">
+    </div>
+    <button class="btn" onclick="submitOtp()">Verify code</button>
+  </div>
+
+  <!-- ===== Screen: Checkout reveal ===== -->
+  <div class="screen" id="screen-checkout">
+    <h2>Review & pay</h2>
+    <p class="sub">Final charges below.</p>
+
+    <div class="confirm-details" style="background:#f8fafc; border-color:#e2e8f0;">
+      <div class="confirm-row"><span class="k" style="color:#64748b;">Base fare</span><span class="v">$238.00</span></div>
+      <div class="confirm-row"><span class="k" style="color:#64748b;">Seat selection</span><span class="v">$22.00</span></div>
+      <div class="confirm-row"><span class="k" style="color:#64748b;">Taxes</span><span class="v">$48.72</span></div>
+      <div class="confirm-row"><span class="k" style="color:#64748b;">Carrier-imposed fees</span><span class="v">$31.50</span></div>
+      <div class="confirm-row"><span class="k" style="color:#64748b;">Booking service fee</span><span class="v">$14.99</span></div>
+      <div class="confirm-row"><span class="k" style="color:#64748b;">Fuel surcharge</span><span class="v">$26.00</span></div>
+      <div class="confirm-row" style="padding-top:10px; border-top:2px solid #cbd5e1;">
+        <span class="k" style="color:#1a2233; font-weight:700;">Total</span>
+        <span class="v" style="font-size:20px;" id="checkoutTotal">$381.21</span>
+      </div>
+    </div>
+
+    <div class="banner-animated" id="flashWarn" style="display:none;">⏰ Price increased — limited availability</div>
+
+    <div class="field">
+      <label>Card number</label>
+      <input type="text" value="•••• •••• •••• 4829" readonly>
+    </div>
+
+    <button class="btn" onclick="goTo('confirm')">Pay & confirm booking</button>
+  </div>
+
+  <!-- ===== Screen: Final confirmation ===== -->
+  <div class="screen" id="screen-confirm">
+    <div class="confirm-check">✅</div>
+    <div class="confirm-title">Booking confirmed!</div>
+    <div class="confirm-sub">We've sent a receipt to your email.</div>
+
+    <div class="confirm-details">
+      <div class="confirm-row"><span class="k">Confirmation</span><span class="v" id="c_ref">—</span></div>
+      <div class="confirm-row"><span class="k">Flight</span><span class="v">SJ 482</span></div>
+      <div class="confirm-row"><span class="k">Route</span><span class="v">BOS → SFO</span></div>
+      <div class="confirm-row"><span class="k">Date</span><span class="v"><span id="confirmDate">—</span>, 8:20 AM</span></div>
+      <div class="confirm-row"><span class="k">Gate</span><span class="v">B14</span></div>
+    </div>
+
+    <button class="btn" onclick="goTo('recall')">Done</button>
+  </div>
+
+  <!-- ===== Screen: Recall ===== -->
+  <div class="screen" id="screen-recall">
+    <div class="recall-box">
+      <h1 style="text-align:center;">Memory check</h1>
+      <p class="sub" style="text-align:center;">Answer from memory. Don't scroll back.</p>
+
+      <div class="recall-q">
+        <label>The 7-digit reservation PIN from the start</label>
+        <input type="text" id="ra_pin" inputmode="numeric" maxlength="7" placeholder="0000000">
+      </div>
+      <div class="recall-q">
+        <label>The seat number you picked</label>
+        <input type="text" id="ra_seat" autocapitalize="characters" maxlength="4" placeholder="e.g. 14C">
+      </div>
+      <div class="recall-q">
+        <label>The reference number from identity verification</label>
+        <input type="text" id="ra_ref" autocapitalize="characters" maxlength="7" placeholder="XXX-XXX">
+      </div>
+
+      <button class="btn" onclick="gradeRecall()">Submit</button>
+    </div>
+  </div>
+
+  <!-- ===== Screen: Results + debrief ===== -->
+  <div class="screen" id="screen-result">
+    <div class="result-icon" id="r_icon">—</div>
+    <div class="result-title" id="r_title">—</div>
+
+    <div style="background:#f8fafc; border-radius:12px; padding:14px; margin:12px 0;">
+      <div class="score-line"><span>Reservation PIN</span><span class="v" id="s_pin">—</span></div>
+      <div class="score-line"><span>Seat number</span><span class="v" id="s_seat">—</span></div>
+      <div class="score-line"><span>Reference number</span><span class="v" id="s_ref">—</span></div>
+      <div class="score-line" style="border-bottom:none;"><span>Time on task</span><span class="v" id="s_time">—</span></div>
+    </div>
+
+    <div class="debrief">
+      <h3>What just happened to you</h3>
+      <ul>
+        <li><strong>Working memory overload</strong> — the 7-digit PIN held in your head for ~5 min while you completed 11 screens</li>
+        <li><strong>Dense, justified legalese</strong> in passive voice (T&Cs screen)</li>
+        <li><strong>Autoplay video</strong> beside reading task</li>
+        <li><strong>Three simultaneous motion elements</strong> — header parallax, ticker strip, carousel</li>
+        <li><strong>Modal interruptions</strong> that blocked the seat task</li>
+        <li><strong>Placeholder-only labels</strong> that disappeared on focus</li>
+        <li><strong>Ambiguous field labels</strong> ("Name", "Document ID")</li>
+        <li><strong>Rigid format validation</strong> (phone must be 10 digits, no punctuation)</li>
+        <li><strong>Form cleared on validation error</strong> and generic "Invalid input" message</li>
+        <li><strong>Simulated crash</strong> mid-flow that wiped unsaved data</li>
+        <li><strong>Ref number shown, dismissed, then required</strong> — classic dual-buffer task</li>
+        <li><strong>Paste blocked</strong> on ref number and password fields</li>
+        <li><strong>Progressive password rules</strong> revealed as you violated each</li>
+        <li><strong>7 pricing tiers</strong> with no recommendation + <strong>3 equal-weight CTAs</strong></li>
+        <li><strong>22 toggles</strong> on one preferences screen</li>
+        <li><strong>Ambiguous image captcha</strong> with partial overlaps</li>
+        <li><strong>15-second OTP countdown</strong> creating time pressure</li>
+        <li><strong>Hidden fees</strong> only surfaced at final checkout</li>
+        <li><strong>Flash-sale price change</strong> if you lingered on payment</li>
+        <li><strong>Delayed promo modal</strong> on the confirmation screen</li>
+        <li><strong>Push notifications every 10s</strong> during the details form</li>
+      </ul>
+    </div>
+
+    <button class="btn secondary" style="margin-top:14px;" onclick="location.reload()">Run again</button>
+  </div>
+
+  <footer class="training-footer" role="contentinfo">
+    <span>ACCESSIBILITY TRAINING SITE · This site is not a real business and contains intentional accessibility errors for educational use.</span>
+    <button type="button" class="notice-link" onclick="openNoticeModal()">Read the full notice</button>
+  </footer>
+
+  <div class="notice-overlay" id="noticeOverlay" aria-hidden="true">
+    <div class="notice-modal"
+         role="dialog"
+         aria-modal="true"
+         aria-labelledby="noticeModalTitle"
+         tabindex="-1"
+         id="noticeModal">
+      <h2 id="noticeModalTitle">Training &amp; Confidentiality Notice</h2>
+      <p>
+        This website was created as part of accessibility training and contains intentional accessibility errors for educational purposes. Any resemblance to real businesses, individuals, or entities—living or dead—is purely coincidental. All names, images, and mission content are fictitious or under the ownership of Deque Systems, Inc. ("Deque").
+      </p>
+      <p>
+        These course materials are considered confidential information of Deque. Nothing in these course materials is intended to grant any rights to the Client under any copyright, trade secret, or other intellectual property right of Deque. Deque specifically prohibits the use of these course materials in artificial intelligence or machine learning training.
+      </p>
+      <button type="button" class="close-btn" id="noticeCloseBtn" onclick="closeNoticeModal()">Close</button>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  // ====== STATE ======
+  const state = {
+    pin: null,             // 7-digit reservation
+    seat: null,            // e.g. "14C"
+    seatConfirmed: false,
+    refCode: null,         // e.g. "X4K-9M2"
+    startedAt: null,
+    hasCrashed: false,
+    currentScreen: "brief",
+    notifInterval: null,
+    flashTimer: null,
+    checkoutBase: 381.21,
+    detailsRetries: 0,
+  };
+
+  // ====== Random helpers ======
+  function randomPin() {
+    let s = "";
+    for (let i = 0; i < 7; i++) s += Math.floor(Math.random()*10);
+    return s;
+  }
+  function randomRef() {
+    const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+    const r = n => Array.from({length:n}, () => chars[Math.floor(Math.random()*chars.length)]).join("");
+    return r(3) + "-" + r(3);
+  }
+
+  // ====== Screen nav ======
+  function goTo(name) {
+    state.currentScreen = name;
+    document.querySelectorAll(".screen").forEach(s => s.classList.remove("active"));
+    const target = document.getElementById("screen-" + name);
+    target.classList.add("active");
+    target.scrollTop = 0;
+
+    // Per-screen setup
+    if (name === "details") {
+      startNotifications();
+      startHeaderTimer();
+    }
+    else stopNotifications();
+
+    if (name === "idshow") {
+      state.refCode = randomRef();
+      document.getElementById("refcode").textContent = state.refCode;
+    }
+    if (name === "password") renderPwRules();
+    if (name === "plan") renderPlans();
+    if (name === "prefs") renderToggles();
+    if (name === "captcha") renderCaptcha();
+    if (name === "otp") startOtpCountdown();
+    if (name === "checkout") startFlashSale();
+    if (name === "confirm") {
+      document.getElementById("c_ref").textContent = state.refCode || "SJ-482X";
+      // Delayed promo modal after 2 seconds
+      setTimeout(() => {
+        if (state.currentScreen === "confirm") {
+          showModal({
+            icon: "🎉",
+            title: "Wait — one more offer!",
+            body: "Unlock <strong>unlimited WiFi</strong> on all future flights for just $4.99/month.",
+            primary: "No thanks",
+            secondary: "Get WiFi",
+            sneaky: true,
+          });
+        }
+      }, 2000);
+    }
+    if (name === "recall") {
+      document.getElementById("ra_pin").focus();
+    }
+  }
+
+  // ====== Brief (PIN memorization) ======
+  state.pin = randomPin();
+  document.getElementById("brief-pin").textContent = state.pin;
+
+  // ====== Flight date — always 3 months from today ======
+  (function setFlightDates() {
+    const now = new Date();
+    const flight = new Date(now.getFullYear(), now.getMonth() + 3, now.getDate());
+    // Handle month-end rollover (e.g., Aug 31 + 3mo would land in Dec, but new Date(yr, mo+3, 31) auto-corrects)
+    const days = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+    const months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+    const fullDays = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
+    const dayShort   = days[flight.getDay()];
+    const monShort   = months[flight.getMonth()];
+    const dayNum     = flight.getDate();
+
+    // "Thu 23 Apr"
+    document.getElementById("flightDateShort").textContent =
+      `${dayShort} ${dayNum} ${monShort}`;
+    // "Thu, Apr 23"
+    document.getElementById("flightDateLong").textContent =
+      `${dayShort}, ${monShort} ${dayNum}`;
+    // "Apr 23"
+    document.getElementById("confirmDate").textContent =
+      `${monShort} ${dayNum}`;
+  })();
+
+  // ====== Seat map generation ======
+  const ROWS = 22;
+  const COLS = ["A","B","C","D","E","F"];
+  const plane = document.getElementById("plane");
+  plane.innerHTML = `<div class="nose"></div>`;
+  const takenSet = new Set();
+  const premiumSet = new Set();
+  for (let r = 1; r <= 3; r++) for (const c of COLS) premiumSet.add(r + c);
+  for (let r = 1; r <= ROWS; r++) {
+    for (const c of COLS) if (Math.random() < 0.35) takenSet.add(r + c);
+  }
+
+  const headerRow = document.createElement("div");
+  headerRow.className = "seat-row";
+  headerRow.innerHTML = `<div></div>` +
+    COLS.slice(0,3).map(c => `<div class="row-num">${c}</div>`).join("") +
+    `<div></div>` +
+    COLS.slice(3).map(c => `<div class="row-num">${c}</div>`).join("") +
+    `<div></div>`;
+  plane.appendChild(headerRow);
+
+  for (let r = 1; r <= ROWS; r++) {
+    const row = document.createElement("div");
+    row.className = "seat-row";
+
+    const leftNum = document.createElement("div");
+    leftNum.className = "row-num";
+    leftNum.textContent = r;
+    row.appendChild(leftNum);
+
+    COLS.forEach((c, idx) => {
+      const id = r + c;
+      const seat = document.createElement("div");
+      seat.className = "seat";
+      seat.dataset.id = id;
+      seat.textContent = c;
+      if (takenSet.has(id)) seat.classList.add("taken");
+      else if (premiumSet.has(id)) seat.classList.add("premium");
+      else seat.classList.add("available");
+      seat.addEventListener("click", () => selectSeat(seat, id));
+      row.appendChild(seat);
+      if (idx === 2) {
+        const gap = document.createElement("div");
+        gap.className = "row-num";
+        gap.textContent = r;
+        row.appendChild(gap);
+      }
+    });
+
+    const rightNum = document.createElement("div");
+    rightNum.className = "row-num";
+    rightNum.textContent = r;
+    row.appendChild(rightNum);
+
+    plane.appendChild(row);
+  }
+  const legend = document.createElement("div");
+  legend.className = "legend";
+  legend.innerHTML = `
+    <div class="legend-item"><div class="legend-swatch" style="background:#93c5fd"></div>Available</div>
+    <div class="legend-item"><div class="legend-swatch" style="background:#fde68a"></div>Premium</div>
+    <div class="legend-item"><div class="legend-swatch" style="background:#475569"></div>Taken</div>`;
+  plane.appendChild(legend);
+
+  function selectSeat(el, id) {
+    if (el.classList.contains("taken")) return;
+    document.querySelectorAll(".seat.selected").forEach(s => {
+      s.classList.remove("selected");
+      if (premiumSet.has(s.dataset.id)) s.classList.add("premium");
+      else s.classList.add("available");
+    });
+    el.classList.remove("available","premium");
+    el.classList.add("selected");
+    el.textContent = id.slice(-1);
+    state.seat = id;
+    document.getElementById("confirmSeat").disabled = false;
+    // Fire a modal every time a seat is picked
+    setTimeout(() => firePickModal(id), 250);
+  }
+
+  // ====== Modals that fire on every seat pick ======
+  const seatPickModals = [
+    {
+      icon: "🤔", title: "Are you sure?",
+      body: "Seat <strong>{seat}</strong> is in a high-traffic area near the lavatories. Travelers often regret this choice.",
+      primary: "Keep this seat", secondary: "Pick another", sneaky: true,
+    },
+    {
+      icon: "✨", title: "Premium seat available!",
+      body: "For just <strong>$24 more</strong>, upgrade to a window seat with extra legroom in row 2.",
+      primary: "No thanks", secondary: "Upgrade", sneaky: true,
+    },
+    {
+      icon: "👀", title: "23 others viewing this seat",
+      body: "Seat <strong>{seat}</strong> is currently being viewed by other travelers. Confirm soon to keep it.",
+      primary: "OK",
+    },
+    {
+      icon: "💺", title: "Did you mean an aisle seat?",
+      body: "Most travelers on this route prefer aisle seats. Seat <strong>{seat}</strong> may not fit your preferences.",
+      primary: "It's fine",
+    },
+    {
+      icon: "🧳", title: "Add a checked bag?",
+      body: "Don't forget — checked bags are <strong>$45 now</strong>, $75 at the airport.",
+      primary: "Skip", secondary: "Add bag", sneaky: true,
+    },
+    {
+      icon: "⭐", title: "Become a SkyJet Plus member",
+      body: "Members save 8% on every booking. <strong>$9.99/mo</strong> after a free trial.",
+      primary: "Maybe later", secondary: "Start free trial", sneaky: true,
+    },
+    {
+      icon: "🍽", title: "Pre-order your meal?",
+      body: "Lock in the chef-curated entrée before they sell out on this flight.",
+      primary: "No", secondary: "Order meal", sneaky: true,
+    },
+    {
+      icon: "📍", title: "Heads up",
+      body: "Seat <strong>{seat}</strong> may have a slightly obstructed window view due to the wing.",
+      primary: "Got it",
+    },
+    {
+      icon: "🛡", title: "Add Trip Protection",
+      body: "Cancel anytime · full refund · 24/7 support. <strong>$29</strong>.",
+      primary: "Skip", secondary: "Add it", sneaky: true,
+    },
+    {
+      icon: "🎁", title: "Earn 2× miles",
+      body: "Enroll in SkyJet Rewards to earn double miles on this trip.",
+      primary: "Not now", secondary: "Enroll", sneaky: true,
+    },
+  ];
+  function firePickModal(seatId) {
+    if (modalOpen) return; // skip if a timer modal is already up
+    const cfg = seatPickModals[Math.floor(Math.random() * seatPickModals.length)];
+    const filled = {
+      ...cfg,
+      body: cfg.body.replace(/{seat}/g, seatId),
+    };
+    showModal(filled);
+  }
+  function confirmSeat() {
+    if (!state.seat) return;
+    state.seatConfirmed = true;
+    goTo("details");
+  }
+
+  // ====== Autoplay video captions (simulates talking-head narration) ======
+  const videoCaptions = [
+    "…upgrade today and enjoy priority boarding…",
+    "Travelers who upgrade save an average of 2 hours…",
+    "Flat-bed seats, chef-curated meals, and lounge access…",
+    "Limited time — lock in your upgrade before takeoff…",
+    "5 reasons you'll never fly economy again…",
+  ];
+  let capIdx = 0;
+  setInterval(() => {
+    const el = document.getElementById("vidCaptions");
+    if (!el) return;
+    capIdx = (capIdx + 1) % videoCaptions.length;
+    el.textContent = videoCaptions[capIdx];
+  }, 3500);
+
+  // ====== Carousel autorotate ======
+  const slides = document.querySelectorAll("#carousel .slide");
+  let slideIdx = 0;
+  setInterval(() => {
+    slides.forEach(s => s.classList.remove("active"));
+    slideIdx = (slideIdx + 1) % slides.length;
+    slides[slideIdx].classList.add("active");
+  }, 2500);
+
+  // ====== Details form validation ======
+  function validateDetails() {
+    const errors = {};
+    const name  = document.getElementById("f_name").value.trim();
+    const dob   = document.getElementById("f_dob").value.trim();
+    const pass  = document.getElementById("f_pass").value.trim();
+    const phone = document.getElementById("f_phone").value.trim();
+    const email = document.getElementById("f_email").value.trim();
+
+    if (!name) errors.name = "Please enter your full name.";
+    else if (name.length < 2) errors.name = "Name must be at least 2 characters.";
+    else if (!/^[A-Za-z][A-Za-z\s'.\-]+$/.test(name)) errors.name = "Letters, spaces, hyphens, and apostrophes only.";
+    else if (!/\s/.test(name)) errors.name = "Please include both first and last name.";
+
+    if (!dob) errors.dob = "Date of birth is required.";
+    else {
+      const m = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/.exec(dob);
+      if (!m) errors.dob = "Use MM/DD/YYYY format.";
+      else {
+        const mm = parseInt(m[1], 10), dd = parseInt(m[2], 10), yyyy = parseInt(m[3], 10);
+        const d = new Date(yyyy, mm - 1, dd);
+        const thisYear = new Date().getFullYear();
+        if (d.getFullYear() !== yyyy || d.getMonth() !== mm - 1 || d.getDate() !== dd) errors.dob = "That isn't a valid date.";
+        else if (yyyy < 1900) errors.dob = "Year must be 1900 or later.";
+        else if (yyyy > thisYear) errors.dob = "Date can't be in the future.";
+      }
+    }
+
+    if (!pass) errors.pass = "Document ID is required.";
+    else if (!/^[A-Za-z0-9]{6,15}$/.test(pass)) errors.pass = "Use 6–15 letters or numbers (no spaces or symbols).";
+
+    const phoneDigits = phone.replace(/\D/g, "");
+    if (!phone) errors.phone = "Phone number is required.";
+    else if (phoneDigits.length !== 10) errors.phone = "Enter exactly 10 digits.";
+
+    if (!email) errors.email = "Email is required.";
+    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) errors.email = "That doesn't look like a valid email.";
+
+    return errors;
+  }
+
+  function clearDetailErrors() {
+    ["name","dob","pass","phone","email"].forEach(k => {
+      const inp = document.getElementById("f_" + k);
+      if (!inp) return;
+      inp.closest(".field").classList.remove("error");
+      const errEl = document.getElementById("f_" + k + "_err");
+      if (errEl) errEl.textContent = "";
+    });
+    document.getElementById("detailsErr").innerHTML = "";
+  }
+
+  function showDetailErrors(errors) {
+    clearDetailErrors();
+    for (const [k, msg] of Object.entries(errors)) {
+      const inp = document.getElementById("f_" + k);
+      if (!inp) continue;
+      inp.closest(".field").classList.add("error");
+      const errEl = document.getElementById("f_" + k + "_err");
+      if (errEl) errEl.textContent = msg;
+    }
+    const firstErr = document.querySelector("#screen-details .field.error");
+    if (firstErr) firstErr.scrollIntoView({ behavior: "smooth", block: "center" });
+  }
+
+  function submitDetails() {
+    // First attempt: trigger the "crash" (cognitive-load demo: lost session)
+    if (!state.hasCrashed) {
+      state.hasCrashed = true;
+      goTo("crash");
+      return;
+    }
+
+    const errors = validateDetails();
+    if (Object.keys(errors).length === 0) {
+      clearDetailErrors();
+      goTo("idshow");
+      return;
+    }
+    showDetailErrors(errors);
+  }
+
+  function restartFromCrash() {
+    // Wipe form — simulating no data persistence
+    ["f_name","f_dob","f_pass","f_phone","f_email"].forEach(id => {
+      document.getElementById(id).value = "";
+    });
+    clearDetailErrors();
+    goTo("details");
+  }
+
+  // ====== Notifications during details form ======
+  const notifEl = document.getElementById("notif");
+  const notifPool = [
+    { icon: "💬", tb: "Mom", body: "Did you book the flight yet?" },
+    { icon: "📧", tb: "Promotions", body: "Your bonus miles expire in 3 days" },
+    { icon: "🔔", tb: "Weather", body: "Storm warning for Boston area tonight" },
+    { icon: "📱", tb: "SkyJet", body: "⚡ Flash sale: 25% off premium upgrades" },
+    { icon: "💬", tb: "Sam", body: "omg you'll never believe what happened" },
+    { icon: "🎯", tb: "News", body: "Breaking: Major airline announces merger" },
+  ];
+  function startNotifications() {
+    stopNotifications();
+    let i = 0;
+    state.notifInterval = setInterval(() => {
+      const n = notifPool[i % notifPool.length];
+      i++;
+      notifEl.querySelector(".icon").textContent = n.icon;
+      notifEl.querySelector(".content").innerHTML = `<span class="tb">${n.tb}</span>${n.body}`;
+      notifEl.classList.add("show");
+      setTimeout(() => notifEl.classList.remove("show"), 3500);
+    }, 10000);
+    // First one fires quickly
+    setTimeout(() => {
+      if (state.currentScreen === "details") {
+        notifEl.querySelector(".icon").textContent = notifPool[0].icon;
+        notifEl.querySelector(".content").innerHTML = `<span class="tb">${notifPool[0].tb}</span>${notifPool[0].body}`;
+        notifEl.classList.add("show");
+        setTimeout(() => notifEl.classList.remove("show"), 3500);
+      }
+    }, 2500);
+  }
+  function stopNotifications() {
+    if (state.notifInterval) clearInterval(state.notifInterval);
+    state.notifInterval = null;
+  }
+
+  // ====== Identity ref-code entry ======
+  function blockPaste(e) {
+    e.preventDefault();
+    const inp = e.target;
+    inp.style.borderColor = "#dc2626";
+    setTimeout(() => inp.style.borderColor = "", 800);
+    return false;
+  }
+  function submitRefCode() {
+    const val = (document.getElementById("refEntered").value || "").trim().toUpperCase();
+    if (val === state.refCode) {
+      goTo("password");
+    } else {
+      // Show the expected code briefly? No — force them to recall or guess once more
+      const inp = document.getElementById("refEntered");
+      inp.style.borderColor = "#dc2626";
+      inp.value = "";
+      inp.placeholder = "Didn't match. Try again.";
+      // After 2 wrong tries, let them through
+      inp._tries = (inp._tries || 0) + 1;
+      if (inp._tries >= 2) goTo("password");
+    }
+  }
+
+  // ====== Password creation w/ progressive rules ======
+  // All rules start hidden; they only appear after being violated.
+  const pwRuleDefs = [
+    { id: "len",     test: v => v.length >= 12,                    label: "At least 12 characters" },
+    { id: "upper",   test: v => /[A-Z]/.test(v),                   label: "At least one uppercase letter" },
+    { id: "lower",   test: v => /[a-z]/.test(v),                   label: "At least one lowercase letter" },
+    { id: "digit",   test: v => /\d/.test(v),                      label: "At least one digit" },
+    { id: "special", test: v => /[!@#$%^&*(),.?":{}|<>]/.test(v),  label: "At least one special character" },
+    { id: "nospace", test: v => !/\s/.test(v),                     label: "No spaces allowed" },
+    { id: "nocommon",test: v => !/(password|1234|qwerty)/i.test(v),label: "No common words (password, 1234, qwerty)" },
+    { id: "norepeat",test: v => !/(.)\1\1/.test(v),                label: "No character repeated 3+ times in a row" },
+    { id: "start",   test: v => /^[A-Za-z]/.test(v),               label: "Must start with a letter" },
+  ];
+  const revealedRules = new Set();
+  function renderPwRules() {
+    const container = document.getElementById("pwRules");
+    container.innerHTML = pwRuleDefs
+      .filter(r => revealedRules.has(r.id))
+      .map(r => `<div class="rule" id="pw-${r.id}">${r.label}</div>`)
+      .join("");
+  }
+  function checkPw() {
+    const v = document.getElementById("pwField").value;
+    let allPass = v.length > 0;
+    pwRuleDefs.forEach(r => {
+      const pass = r.test(v);
+      if (!pass && v.length > 0) revealedRules.add(r.id);
+      if (!pass) allPass = false;
+    });
+    renderPwRules();
+    // Apply pass/fail classes
+    const vLive = document.getElementById("pwField").value;
+    pwRuleDefs.forEach(r => {
+      const el = document.getElementById("pw-" + r.id);
+      if (!el) return;
+      el.classList.remove("passed","failed");
+      if (r.test(vLive)) el.classList.add("passed");
+      else el.classList.add("failed");
+    });
+    document.getElementById("pwBtn").disabled = !allPass;
+  }
+
+  // ====== Plan selection (7 tiers, no recommendation) ======
+  const plans = [
+    { name: "Basic Economy",    desc: "No seat selection, no changes, no bag",            price: "$179" },
+    { name: "Economy Saver",    desc: "Seat for a fee, changes for a fee",                price: "$219" },
+    { name: "Standard Economy", desc: "Seat included, changes for a fee",                 price: "$259" },
+    { name: "Economy Flex",     desc: "Free changes up to 24 hours before departure",     price: "$289" },
+    { name: "Premium Economy",  desc: "More legroom, priority boarding, 1 checked bag",   price: "$339" },
+    { name: "Business Saver",   desc: "Lie-flat seat (partial), lounge access",           price: "$689" },
+    { name: "Business Flex",    desc: "Lie-flat seat, lounge access, refundable",         price: "$849" },
+  ];
+  function renderPlans() {
+    document.getElementById("planList").innerHTML = plans.map((p,i) => `
+      <div class="plan-card" onclick="selectPlan(this,${i})">
+        <div>
+          <div class="p-name">${p.name}</div>
+          <div class="p-desc">${p.desc}</div>
+        </div>
+        <div class="p-price">${p.price}</div>
+      </div>
+    `).join("");
+  }
+  function selectPlan(el, i) {
+    document.querySelectorAll(".plan-card").forEach(c => c.classList.remove("selected"));
+    el.classList.add("selected");
+  }
+
+  // ====== Preferences (22 toggles) ======
+  const toggleLabels = [
+    "Email me about price drops",
+    "Email me about flight updates",
+    "Email me weekly promotions",
+    "SMS alerts for gate changes",
+    "SMS alerts for boarding",
+    "SMS marketing messages",
+    "Push notifications: bookings",
+    "Push notifications: news",
+    "Push notifications: offers",
+    "Share my data with partners",
+    "Share my data with advertisers",
+    "Share my data with affiliates",
+    "Save my payment info",
+    "Save my passport info",
+    "Save my seat preferences",
+    "Show personalized ads",
+    "Show recommendations on home",
+    "Allow cookies: analytics",
+    "Allow cookies: marketing",
+    "Allow location tracking",
+    "Allow contacts access",
+    "Allow calendar integration",
+  ];
+  function renderToggles() {
+    document.getElementById("toggleList").innerHTML = toggleLabels.map((l,i) => `
+      <div class="toggle-row">
+        <div class="tg-label">${l}</div>
+        <div class="tg ${i < 9 ? "on" : ""}" onclick="this.classList.toggle('on')"></div>
+      </div>
+    `).join("");
+  }
+
+  // ====== Image captcha with ambiguous traffic-light photos ======
+  // Mix of clear traffic lights, tiny/distant lights, and decoy night-scene
+  // images with bright signage that aren't traffic lights at all.
+  const captchaImages = [
+    "hans-traffic-light-6010.jpg",          // close-up red light
+    "hans-traffic-lights-49698.jpg",        // night, multiple red lights + ambulance
+    "garten-gg-traffic-2251530.jpg",        // modern intersection, lights visible
+    "pexels-cars-1284000.jpg",              // Italian street, small green light
+    "12019-hong-kong-1990268.jpg",          // neon city — no traffic lights (decoy)
+    "anthr_photoblog-night-4336403.jpg",    // night decoy
+    "rasor-taxi-7433597.jpg",               // taxi scene
+  ];
+
+  function renderCaptcha() {
+    const grid = document.getElementById("captchaGrid");
+    const tiles = [...captchaImages];
+    // Pad to 9 with random repeats (we'll vary the crop so they look distinct)
+    while (tiles.length < 9) {
+      tiles.push(captchaImages[Math.floor(Math.random() * captchaImages.length)]);
+    }
+    // Fisher-Yates shuffle
+    for (let i = tiles.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [tiles[i], tiles[j]] = [tiles[j], tiles[i]];
+    }
+    grid.innerHTML = tiles.map(img => {
+      const xPos = Math.floor(Math.random() * 60) + 20;
+      const yPos = Math.floor(Math.random() * 60) + 20;
+      return `<div class="captcha-tile"
+                   role="checkbox"
+                   aria-checked="false"
+                   tabindex="0"
+                   onclick="toggleCaptchaTile(this)"
+                   onkeydown="if(event.key===' '||event.key==='Enter'){event.preventDefault();toggleCaptchaTile(this);}"
+                   style="background-image: url('${img}'); background-position: ${xPos}% ${yPos}%;"></div>`;
+    }).join("");
+  }
+  function toggleCaptchaTile(el) {
+    el.classList.toggle("sel");
+    el.setAttribute("aria-checked", el.classList.contains("sel") ? "true" : "false");
+  }
+  window.toggleCaptchaTile = toggleCaptchaTile;
+
+  // ====== OTP countdown ======
+  let otpInterval;
+  function startOtpCountdown() {
+    let remaining = 15;
+    document.getElementById("otpTimer").textContent = remaining;
+    document.getElementById("otpInput").value = "";
+    // Simulate SMS arriving — show it as a native notification on the same device
+    setTimeout(() => {
+      if (state.currentScreen !== "otp") return;
+      const code = Math.floor(100000 + Math.random()*900000);
+      state.otpCode = String(code);
+      notifEl.querySelector(".icon").textContent = "📲";
+      notifEl.querySelector(".content").innerHTML = `<span class="tb">SkyJet</span>Your verification code: <strong>${code}</strong>`;
+      notifEl.classList.add("show");
+      setTimeout(() => notifEl.classList.remove("show"), 4000);
+    }, 1500);
+    if (otpInterval) clearInterval(otpInterval);
+    otpInterval = setInterval(() => {
+      if (state.currentScreen !== "otp") { clearInterval(otpInterval); return; }
+      remaining--;
+      document.getElementById("otpTimer").textContent = remaining;
+      if (remaining <= 0) {
+        clearInterval(otpInterval);
+        // Auto-advance — don't truly lock them out
+        goTo("checkout");
+      }
+    }, 1000);
+  }
+  function submitOtp() {
+    // Accept any input — the friction is the countdown
+    if (otpInterval) clearInterval(otpInterval);
+    goTo("checkout");
+  }
+
+  // ====== Flash sale price change ======
+  function startFlashSale() {
+    if (state.flashTimer) clearTimeout(state.flashTimer);
+    state.flashTimer = setTimeout(() => {
+      if (state.currentScreen !== "checkout") return;
+      const newTotal = (state.checkoutBase + 24).toFixed(2);
+      document.getElementById("checkoutTotal").textContent = "$" + newTotal;
+      document.getElementById("checkoutTotal").style.color = "#dc2626";
+      document.getElementById("flashWarn").style.display = "block";
+    }, 8000);
+  }
+
+  // ====== Modal system ======
+  const overlay = document.getElementById("modalOverlay");
+  const modalEl = document.getElementById("modal");
+  let modalOpen = false;
+
+  function showModal(cfg) {
+    modalEl.className = "modal" + (cfg.sneaky ? " sneaky" : "");
+    modalEl.innerHTML = `
+      ${cfg.ad ? `<div class="ad-card" style="margin:0 0 12px;">${cfg.ad}</div>` : ""}
+      <div class="m-icon">${cfg.icon || "🔔"}</div>
+      <div class="m-title">${cfg.title}</div>
+      <div class="m-body">${cfg.body}</div>
+      ${cfg.input ? `<input class="m-input" id="mInput" placeholder="${cfg.input.placeholder || ""}" ${cfg.input.type ? `type="${cfg.input.type}"` : ""}>` : ""}
+      <div class="m-btns">
+        ${cfg.secondary ? `<button class="m-btn secondary" id="mSec">${cfg.secondary}</button>` : ""}
+        <button class="m-btn primary" id="mPri">${cfg.primary}</button>
+      </div>
+    `;
+    overlay.classList.add("show");
+    modalOpen = true;
+    if (cfg.input) setTimeout(() => document.getElementById("mInput")?.focus(), 100);
+
+    const close = () => {
+      overlay.classList.remove("show");
+      modalOpen = false;
+      cfg.onClose && cfg.onClose();
+    };
+    document.getElementById("mPri").onclick = () => {
+      if (cfg.validate) {
+        const val = document.getElementById("mInput")?.value.trim();
+        if (!cfg.validate(val)) {
+          const inp = document.getElementById("mInput");
+          if (inp) { inp.style.borderColor = "#dc2626"; inp.value = ""; inp.focus(); }
+          return;
+        }
+      }
+      close();
+    };
+    if (cfg.secondary) {
+      document.getElementById("mSec").onclick = () => {
+        cfg.onSecondary && cfg.onSecondary();
+        close();
+      };
+    }
+  }
+
+  // ====== Continuous modal storm during seat picking ======
+  const modalQueue = [
+    {
+      icon: "🎁",
+      title: "Unlock 1,200 bonus miles",
+      body: "Apply for the <strong>SkyJet Rewards</strong> card during checkout and earn 1,200 bonus miles on this trip.",
+      ad: "🔥 Today only · 0% APR for 12 months",
+      primary: "Maybe later", secondary: "Yes, tell me more", sneaky: true,
+    },
+    {
+      icon: "🧩", title: "Attention check",
+      body: "Type the word <strong>SEAT</strong> to confirm you're paying attention.",
+      input: { placeholder: "Type SEAT" },
+      validate: v => (v || "").toUpperCase() === "SEAT",
+      primary: "Confirm",
+    },
+    {
+      icon: "⏳", title: "Your seat is being held",
+      body: "Other travelers are also browsing this flight. Please confirm your selection quickly.",
+      primary: "Got it",
+    },
+    {
+      icon: "🛡", title: "Add Trip Protection?",
+      body: "Cancel anytime · full refund · 24/7 support. Only <strong>$29</strong> when added now.",
+      primary: "Skip", secondary: "Add it", sneaky: true,
+    },
+    {
+      icon: "📶", title: "Add in-flight Wi-Fi",
+      body: "Stay connected the whole flight. <strong>$14</strong> per passenger.",
+      primary: "Skip", secondary: "Add Wi-Fi", sneaky: true,
+    },
+    {
+      icon: "🍷", title: "Pre-order drinks",
+      body: "Beat the cart — pre-pay for your in-flight beverages now.",
+      primary: "No thanks", secondary: "Order now", sneaky: true,
+    },
+    {
+      icon: "🚗", title: "Need a ride from SFO?",
+      body: "Pre-book a ride and save 22% versus airport rates.",
+      primary: "Skip", secondary: "Book ride", sneaky: true,
+    },
+    {
+      icon: "🏨", title: "Add a hotel",
+      body: "Bundle a hotel in San Francisco — save up to 30%.",
+      primary: "No thanks", secondary: "View hotels", sneaky: true,
+    },
+    {
+      icon: "🎫", title: "Priority boarding",
+      body: "Skip the line and board first. Just <strong>$12</strong>.",
+      primary: "Skip", secondary: "Add", sneaky: true,
+    },
+    {
+      icon: "📱", title: "Download the SkyJet app",
+      body: "Manage trips, get gate alerts, and earn 500 bonus miles for installing.",
+      primary: "Not now", secondary: "Get the app", sneaky: true,
+    },
+    {
+      icon: "🔥", title: "Flash sale ending",
+      body: "Premium seats are <strong>50% off</strong> for the next 90 seconds.",
+      primary: "Skip", secondary: "View premium", sneaky: true,
+    },
+    {
+      icon: "🧠", title: "Quick survey",
+      body: "How are you feeling about your booking experience so far?",
+      primary: "Skip survey",
+    },
+  ];
+  let queueIdx = 0;
+  function fireNextModal() {
+    if (modalOpen) return;
+    if (state.currentScreen !== "seats") return;
+    const cfg = modalQueue[queueIdx % modalQueue.length];
+    queueIdx++;
+    showModal(cfg);
+  }
+  // Fast and furious — every 3 seconds
+  setInterval(fireNextModal, 3000);
+  setTimeout(fireNextModal, 1500);
+
+  // ====== Header timer — starts at 2:00 when user reaches passenger details ======
+  const timerEl = document.getElementById("timer");
+  let timerSeconds = 2 * 60;
+  let timerStarted = false;
+  let timerInterval = null;
+  let timerExpired = false;
+  // Screens where the timer shouldn't keep running — they're done.
+  const TIMER_DONE_SCREENS = new Set(["confirm","recall","result"]);
+  state.startedAt = Date.now();
+
+  function startHeaderTimer() {
+    if (timerStarted) return;
+    timerStarted = true;
+    timerEl.style.display = "";
+    timerSeconds = 2 * 60;
+    renderHeaderTimer();
+    timerInterval = setInterval(() => {
+      // Stop counting down once the user is past the work
+      if (TIMER_DONE_SCREENS.has(state.currentScreen)) {
+        clearInterval(timerInterval);
+        timerEl.style.display = "none";
+        return;
+      }
+      timerSeconds--;
+      renderHeaderTimer();
+      if (timerSeconds <= 0 && !timerExpired) {
+        timerExpired = true;
+        clearInterval(timerInterval);
+        handleTimeout();
+      }
+    }, 1000);
+  }
+  function renderHeaderTimer() {
+    const safe = Math.max(0, timerSeconds);
+    const m = Math.floor(safe / 60);
+    const s = String(safe % 60).padStart(2, "0");
+    timerEl.textContent = `⏱ ${m}:${s}`;
+    timerEl.classList.toggle("warn", safe < 30);
+  }
+
+  function handleTimeout() {
+    // Don't trigger if they've already reached the home stretch.
+    if (TIMER_DONE_SCREENS.has(state.currentScreen)) return;
+
+    showModal({
+      icon: "⌛",
+      title: "Session expired",
+      body: "For your security, this booking session has timed out. Please re-verify your information to continue.",
+      primary: "Restart this step",
+      onClose: () => {
+        // Wipe details form (cognitive-load demo: lost data)
+        ["f_name","f_dob","f_pass","f_phone","f_email"].forEach(id => {
+          const el = document.getElementById(id);
+          if (el) el.value = "";
+        });
+        clearDetailErrors();
+
+        // Reset timer for another go
+        timerSeconds = 2 * 60;
+        timerExpired = false;
+        renderHeaderTimer();
+        timerInterval = setInterval(() => {
+          if (TIMER_DONE_SCREENS.has(state.currentScreen)) {
+            clearInterval(timerInterval);
+            timerEl.style.display = "none";
+            return;
+          }
+          timerSeconds--;
+          renderHeaderTimer();
+          if (timerSeconds <= 0 && !timerExpired) {
+            timerExpired = true;
+            clearInterval(timerInterval);
+            handleTimeout();
+          }
+        }, 1000);
+
+        goTo("details");
+      },
+    });
+  }
+
+  // ====== Recall grading ======
+  function gradeRecall() {
+    const pinGuess  = (document.getElementById("ra_pin").value || "").trim();
+    const seatGuess = (document.getElementById("ra_seat").value || "").trim().toUpperCase();
+    const refGuess  = (document.getElementById("ra_ref").value  || "").trim().toUpperCase();
+
+    const pinOk  = pinGuess === state.pin;
+    const seatOk = seatGuess === (state.seat || "");
+    const refOk  = refGuess === (state.refCode || "");
+
+    const elapsed = Math.round((Date.now() - state.startedAt) / 1000);
+
+    document.getElementById("s_pin").innerHTML  = line(pinGuess  || "(blank)", state.pin,     pinOk);
+    document.getElementById("s_seat").innerHTML = line(seatGuess || "(blank)", state.seat,    seatOk);
+    document.getElementById("s_ref").innerHTML  = line(refGuess  || "(blank)", state.refCode, refOk);
+    document.getElementById("s_time").textContent = `${Math.floor(elapsed/60)}m ${elapsed%60}s`;
+
+    const score = [pinOk, seatOk, refOk].filter(Boolean).length;
+    const icons = ["🙈","😅","🙂","🎯"];
+    const titles = ["Memory wiped.","Partial recall.","Nearly all of it.","Perfect recall!"];
+    document.getElementById("r_icon").textContent = icons[score];
+    document.getElementById("r_title").textContent = `${titles[score]} (${score}/3)`;
+
+    goTo("result");
+  }
+  function line(guess, truth, ok) {
+    const cls = ok ? "ok" : "bad";
+    if (ok) return `<span class="${cls}">${guess} ✓</span>`;
+    return `<span class="${cls}">${guess}</span> <span style="color:#94a3b8; font-weight:400;"> · was ${truth}</span>`;
+  }
+
+  // ====== Accessible notice modal ======
+  let noticeTrigger = null;
+  const noticeOverlay = document.getElementById("noticeOverlay");
+  const noticeModal = document.getElementById("noticeModal");
+
+  function openNoticeModal() {
+    noticeTrigger = document.activeElement;
+    noticeOverlay.classList.add("show");
+    noticeOverlay.setAttribute("aria-hidden", "false");
+    setTimeout(() => {
+      document.getElementById("noticeCloseBtn").focus();
+    }, 30);
+    document.addEventListener("keydown", noticeKeyHandler);
+  }
+
+  function closeNoticeModal() {
+    noticeOverlay.classList.remove("show");
+    noticeOverlay.setAttribute("aria-hidden", "true");
+    document.removeEventListener("keydown", noticeKeyHandler);
+    if (noticeTrigger && typeof noticeTrigger.focus === "function") {
+      noticeTrigger.focus();
+    }
+  }
+
+  function noticeKeyHandler(e) {
+    if (e.key === "Escape") {
+      e.preventDefault();
+      closeNoticeModal();
+      return;
+    }
+    if (e.key === "Tab") {
+      // Only one focusable element — trap focus on it
+      const focusables = noticeModal.querySelectorAll("button, [href], input, select, textarea, [tabindex]:not([tabindex='-1'])");
+      if (focusables.length === 0) { e.preventDefault(); return; }
+      const first = focusables[0];
+      const last = focusables[focusables.length - 1];
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault(); last.focus();
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault(); first.focus();
+      }
+    }
+  }
+
+  noticeOverlay.addEventListener("click", (e) => {
+    if (e.target === noticeOverlay) closeNoticeModal();
+  });
+
+  // expose for inline handlers
+  window.goTo = goTo;
+  window.confirmSeat = confirmSeat;
+  window.submitDetails = submitDetails;
+  window.restartFromCrash = restartFromCrash;
+  window.submitRefCode = submitRefCode;
+  window.checkPw = checkPw;
+  window.selectPlan = selectPlan;
+  window.submitOtp = submitOtp;
+  window.gradeRecall = gradeRecall;
+  window.blockPaste = blockPaste;
+  window.openNoticeModal = openNoticeModal;
+  window.closeNoticeModal = closeNoticeModal;
+</script>
+
+</body>
+</html>
